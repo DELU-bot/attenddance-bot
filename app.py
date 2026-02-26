@@ -22,7 +22,7 @@ FEISHU_APP_ID = os.environ.get('FEISHU_APP_ID', '')
 FEISHU_APP_SECRET = os.environ.get('FEISHU_APP_SECRET', '')
 ADMIN_USER_IDS = os.environ.get('ADMIN_USER_IDS', '').split(',')
 SCHEDULE_ENABLED = os.environ.get('SCHEDULE_ENABLED', 'true').lower() == 'true'
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')  # 管理后台密码
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
 # 应用配置
 app = Flask(__name__)
@@ -40,7 +40,6 @@ def init_db():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    # 考勤记录表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS attendance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +61,6 @@ def init_db():
         )
     ''')
 
-    # 用户配置表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id TEXT PRIMARY KEY,
@@ -71,7 +69,6 @@ def init_db():
         )
     ''')
 
-    # 系统配置表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -80,7 +77,6 @@ def init_db():
         )
     ''')
 
-    # 初始化默认配置
     default_settings = {
         'bot_name': '考勤小助手',
         'welcome_message': '你好！我是考勤小助手',
@@ -107,13 +103,11 @@ def init_db():
     logger.info("数据库初始化完成")
 
 def get_db():
-    """获取数据库连接"""
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
 def get_setting(key, default=''):
-    """获取配置"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT value FROM settings WHERE key = ?', (key,))
@@ -122,7 +116,6 @@ def get_setting(key, default=''):
     return row['value'] if row else default
 
 def set_setting(key, value):
-    """设置配置"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)',
@@ -131,7 +124,6 @@ def set_setting(key, value):
     conn.close()
 
 def get_all_settings():
-    """获取所有配置"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT key, value FROM settings')
@@ -140,7 +132,6 @@ def get_all_settings():
     settings = {}
     for row in rows:
         try:
-            # 尝试解析JSON
             settings[row['key']] = json.loads(row['value'])
         except:
             settings[row['key']] = row['value']
@@ -149,7 +140,6 @@ def get_all_settings():
 # ==================== 飞书API部分 ====================
 
 def send_feishu_message(webhook_url, message):
-    """发送飞书消息"""
     try:
         headers = {"Content-Type": "application/json; charset=utf-8"}
         response = requests.post(webhook_url, headers=headers, json=message, timeout=10)
@@ -160,7 +150,6 @@ def send_feishu_message(webhook_url, message):
         return False
 
 def send_text_message(text, webhook_url=None):
-    """发送文本消息"""
     url = webhook_url or FEISHU_WEBHOOK_URL
     if not url:
         return False
@@ -168,7 +157,6 @@ def send_text_message(text, webhook_url=None):
     return send_feishu_message(url, message)
 
 def send_rich_text_message(title, content, webhook_url=None):
-    """发送富文本消息"""
     url = webhook_url or FEISHU_WEBHOOK_URL
     if not url:
         return False
@@ -192,7 +180,6 @@ def get_current_time():
     return datetime.now().strftime("%H:%M:%S")
 
 def register_user(user_id, user_name):
-    """注册用户"""
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -206,7 +193,6 @@ def register_user(user_id, user_name):
         conn.close()
 
 def check_in(user_id, user_name, status, task, location="办公室", tasks_json="[]"):
-    """签到"""
     conn = get_db()
     cursor = conn.cursor()
     today = get_today_date()
@@ -232,7 +218,6 @@ def check_in(user_id, user_name, status, task, location="办公室", tasks_json=
         conn.close()
 
 def check_out(user_id, completion, work_summary=''):
-    """签退"""
     conn = get_db()
     cursor = conn.cursor()
     today = get_today_date()
@@ -257,7 +242,6 @@ def check_out(user_id, completion, work_summary=''):
         conn.close()
 
 def update_progress(user_id, progress_status):
-    """更新进度状态"""
     conn = get_db()
     cursor = conn.cursor()
     today = get_today_date()
@@ -271,7 +255,6 @@ def update_progress(user_id, progress_status):
         conn.close()
 
 def get_today_status():
-    """获取今日考勤状态"""
     conn = get_db()
     cursor = conn.cursor()
     today = get_today_date()
@@ -304,7 +287,6 @@ def get_today_status():
         conn.close()
 
 def get_user_status(user_id):
-    """获取指定用户今日状态"""
     conn = get_db()
     cursor = conn.cursor()
     today = get_today_date()
@@ -331,7 +313,6 @@ def get_user_status(user_id):
         conn.close()
 
 def get_all_users():
-    """获取所有用户"""
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -342,7 +323,6 @@ def get_all_users():
         conn.close()
 
 def build_daily_report():
-    """构建每日汇报"""
     statuses = get_today_status()
     all_users = get_all_users()
     today = get_today_date()
@@ -371,7 +351,7 @@ def build_daily_report():
 
     return content
 
-# ==================== 管理后台 ====================
+# ==================== 管理后台HTML ====================
 
 ADMIN_HTML = '''
 <!DOCTYPE html>
@@ -624,31 +604,26 @@ ADMIN_HTML = '''
 
 @app.route('/')
 def admin_index():
-    """管理后台首页"""
     settings = get_all_settings()
     return render_template_string(ADMIN_HTML, page='settings', settings=settings)
 
 @app.route('/timing')
 def admin_timing():
-    """定时任务设置"""
     settings = get_all_settings()
     return render_template_string(ADMIN_HTML, page='timing', settings=settings)
 
 @app.route('/tasks')
 def admin_tasks():
-    """任务标签管理"""
     settings = get_all_settings()
     return render_template_string(ADMIN_HTML, page='tasks', settings=settings)
 
 @app.route('/status')
 def admin_status():
-    """考勤状态管理"""
     settings = get_all_settings()
     return render_template_string(ADMIN_HTML, page='status', settings=settings)
 
 @app.route('/data')
 def admin_data():
-    """考勤数据查看"""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM attendance ORDER BY date DESC, check_in_time DESC LIMIT 100')
@@ -659,7 +634,6 @@ def admin_data():
 
 @app.route('/settings/save', methods=['POST'])
 def save_settings():
-    """保存基本设置"""
     set_setting('bot_name', request.form.get('bot_name', '考勤小助手'))
     set_setting('welcome_message', request.form.get('welcome_message', '你好！'))
     set_setting('company_location', request.form.get('company_location', ''))
@@ -670,7 +644,6 @@ def save_settings():
 
 @app.route('/timing/save', methods=['POST'])
 def save_timing():
-    """保存定时设置"""
     set_setting('morning_time', request.form.get('morning_time', '09:00'))
     set_setting('noon_time', request.form.get('noon_time', '13:00'))
     set_setting('evening_time', request.form.get('evening_time', '18:00'))
@@ -682,7 +655,6 @@ def save_timing():
 
 @app.route('/tasks/save', methods=['POST'])
 def save_tasks():
-    """保存任务标签"""
     tags = request.form.get('task_tags', '[]')
     set_setting('task_tags', tags)
     settings = get_all_settings()
@@ -690,7 +662,6 @@ def save_tasks():
 
 @app.route('/status/save', methods=['POST'])
 def save_status():
-    """保存状态选项"""
     status = request.form.get('status_options', '[]')
     set_setting('status_options', status)
     settings = get_all_settings()
@@ -705,6 +676,13 @@ def feishu_webhook():
         data = request.get_json()
         logger.info(f"收到飞书消息: {data}")
 
+        # ====== 关键修复：处理URL验证请求 ======
+        # 当你在飞书开放平台保存回调链接时，飞书会发送验证请求
+        # 需要返回 {"challenge": "xxx"} 格式的JSON
+        if data.get('type') == 'url_verification':
+            return jsonify({"challenge": data.get('challenge')})
+        # ========================================
+
         if not data or data.get('msg_type') != 'text':
             return jsonify({"code": 0, "message": "ok"})
 
@@ -718,7 +696,6 @@ def feishu_webhook():
         task_tags = settings.get('task_tags', ['视频剪辑', '文案撰写', '素材拍摄'])
 
         if text_content in ['签到', '/checkin', '/签到']:
-            # 构建签到卡片
             task_buttons = ''.join([f'<button type="button" onclick="selectTask(this)">{t}</button>' for t in task_tags[:6]])
             card = {
                 "header": {"title": {"tag": "plain_text", "content": "☀️ 早安！请签到"}, "template": "blue"},
@@ -786,7 +763,6 @@ def feishu_webhook():
 
 @app.route('/feishu/callback', methods=['POST'])
 def feishu_callback():
-    """接收飞书卡片回调"""
     try:
         data = request.get_json()
         logger.info(f"收到回调: {data}")
@@ -817,9 +793,8 @@ def feishu_callback():
 
 # ==================== 健康检查 ====================
 
-@app.route('/health')
-def health():
-    """健康检查"""
+@app.route('/')
+def index():
     return jsonify({
         "status": "ok",
         "message": "飞书考勤机器人运行中",
@@ -833,4 +808,3 @@ if __name__ == '__main__':
     init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
