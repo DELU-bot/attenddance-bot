@@ -17,8 +17,7 @@ from functools import wraps
 # ==================== 配置部分 ====================
 
 # 环境变量配置（飞书Webhook地址直接配置在这里）
-FEISHU_WEBHOOK_URL = os.environ.get('FEISHU_WEBHOOK_URL', 'https://open.feishu.cn/open-apis/bot/v2/hook/06a808cc-91ef-4bca-bece-631a347b9ad5
-')
+FEISHU_WEBHOOK_URL = os.environ.get('FEISHU_WEBHOOK_URL', 'https://open.feishu.cn/open-apis/bot/v2/hook/06a808cc-91ef-4bca-bece-631a347b9ad5')
 FEISHU_APP_ID = os.environ.get('FEISHU_APP_ID', '')
 FEISHU_APP_SECRET = os.environ.get('FEISHU_APP_SECRET', '')
 ADMIN_USER_IDS = os.environ.get('ADMIN_USER_IDS', '').split(',')
